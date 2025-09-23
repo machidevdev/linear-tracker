@@ -49,6 +49,13 @@ app.post('/webhook/linear', async (req, res) => {
 
     console.log(`📨 Received ${payload.type} ${payload.action} webhook from ${payload.actor.name}`);
 
+    // Filter out less important webhook types
+    const ignoredTypes = ['IssueLabel', 'ProjectMilestone', 'Attachment', 'Reaction'];
+    if (ignoredTypes.includes(payload.type)) {
+      console.log(`🔇 Ignoring ${payload.type} webhook`);
+      return res.status(200).json({ success: true, ignored: true });
+    }
+
     // Format the message for Telegram
     const message = formatLinearWebhookMessage(payload);
 
