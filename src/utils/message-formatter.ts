@@ -53,40 +53,11 @@ function formatPriority(priority: number): string {
  */
 function formatIssueMessage(payload: LinearWebhookPayload): string {
   const issue = payload.data as LinearIssue;
-  const action = formatAction(payload.action);
+  const statusLower = issue.state.name.toLowerCase();
   
-  let message = `${action} Issue\n\n`;
-  message += `🎯 *${escapeMarkdown(issue.identifier)}*: [${escapeMarkdown(issue.title)}](${issue.url})\n`;
-  message += `👤 ${escapeMarkdown(payload.actor.name)}\n`;
-  message += `📋 Team: ${escapeMarkdown(issue.team.name)}\n`;
-  message += `🏷️ Status: ${escapeMarkdown(issue.state.name)}\n`;
-  
-  if (issue.priority) {
-    message += `⚡ ${formatPriority(issue.priority)}\n`;
-  }
-  
-  if (issue.assignee) {
-    message += `👨‍💻 Assignee: ${escapeMarkdown(issue.assignee.name)}\n`;
-  }
-  
-  if (issue.labels && issue.labels.length > 0) {
-    message += `🏷️ Labels: ${issue.labels.map(label => escapeMarkdown(label.name)).join(', ')}\n`;
-  }
-  
-  if (issue.project) {
-    message += `📁 Project: ${escapeMarkdown(issue.project.name)}\n`;
-  }
-  
-  if (issue.cycle) {
-    message += `🔄 Cycle: ${escapeMarkdown(issue.cycle.name)}\n`;
-  }
-  
-  if (issue.description && payload.action === 'create') {
-    const truncatedDesc = issue.description.length > 200 
-      ? issue.description.substring(0, 200) + '...' 
-      : issue.description;
-    message += `\n📝 ${escapeMarkdown(truncatedDesc)}\n`;
-  }
+  // Simple format: [status]: Title - Actor
+  let message = `\\[${escapeMarkdown(statusLower)}\\]: [${escapeMarkdown(issue.title)}](${issue.url})\n`;
+  message += `\\- ${escapeMarkdown(payload.actor.name)}\n`;
   
   return message;
 }
@@ -96,17 +67,14 @@ function formatIssueMessage(payload: LinearWebhookPayload): string {
  */
 function formatCommentMessage(payload: LinearWebhookPayload): string {
   const comment = payload.data as LinearComment;
-  const action = formatAction(payload.action);
   
-  let message = `${action} Comment\n\n`;
-  message += `💬 ${escapeMarkdown(payload.actor.name)} ${payload.action}d a comment\n`;
-  message += `🔗 [View Comment](${payload.url})\n`;
+  let message = `💬 New comment by ${escapeMarkdown(payload.actor.name)}\n`;
   
   if (payload.action === 'create' || payload.action === 'update') {
-    const truncatedBody = comment.body.length > 300 
-      ? comment.body.substring(0, 300) + '...' 
+    const truncatedBody = comment.body.length > 200 
+      ? comment.body.substring(0, 200) + '\\.\\.\\.' 
       : comment.body;
-    message += `\n"${escapeMarkdown(truncatedBody)}"\n`;
+    message += `"${escapeMarkdown(truncatedBody)}"\n`;
   }
   
   return message;
@@ -117,27 +85,10 @@ function formatCommentMessage(payload: LinearWebhookPayload): string {
  */
 function formatProjectMessage(payload: LinearWebhookPayload): string {
   const project = payload.data as LinearProject;
-  const action = formatAction(payload.action);
+  const action = payload.action === 'create' ? 'New project' : `Project ${payload.action}d`;
   
-  let message = `${action} Project\n\n`;
-  message += `📁 *${escapeMarkdown(project.name)}*\n`;
-  message += `👤 ${escapeMarkdown(payload.actor.name)}\n`;
-  message += `📊 Status: ${escapeMarkdown(project.state)}\n`;
-  
-  if (project.lead) {
-    message += `👨‍💼 Lead: ${escapeMarkdown(project.lead.name)}\n`;
-  }
-  
-  if (project.teams && project.teams.length > 0) {
-    message += `🏢 Teams: ${project.teams.map(team => escapeMarkdown(team.name)).join(', ')}\n`;
-  }
-  
-  if (project.description && payload.action === 'create') {
-    const truncatedDesc = project.description.length > 200 
-      ? project.description.substring(0, 200) + '...' 
-      : project.description;
-    message += `\n📝 ${escapeMarkdown(truncatedDesc)}\n`;
-  }
+  let message = `📁 ${action}: ${escapeMarkdown(project.name)}\n`;
+  message += `\\- ${escapeMarkdown(payload.actor.name)}\n`;
   
   return message;
 }
@@ -146,12 +97,9 @@ function formatProjectMessage(payload: LinearWebhookPayload): string {
  * Formats a generic entity message for unsupported types
  */
 function formatGenericMessage(payload: LinearWebhookPayload): string {
-  const action = formatAction(payload.action);
   const entityIcon = getEntityIcon(payload.type);
   
-  let message = `${action} ${payload.type}\n\n`;
-  message += `${entityIcon} ${escapeMarkdown(payload.actor.name)} ${payload.action}d a ${payload.type.toLowerCase()}\n`;
-  message += `🔗 [View ${payload.type}](${payload.url})\n`;
+  let message = `${entityIcon} ${escapeMarkdown(payload.actor.name)} ${payload.action}d a ${payload.type.toLowerCase()}\n`;
   
   return message;
 }
