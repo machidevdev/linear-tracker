@@ -3,7 +3,6 @@ import {
   LinearIssue, 
   LinearComment, 
   LinearProject,
-  LinearAction,
   LinearEntityType
 } from '../types/linear.js';
 
@@ -14,39 +13,7 @@ function escapeMarkdown(text: string): string {
   return text.replace(/[_*\[\]()~`>#+=|{}.!-]/g, '\\$&');
 }
 
-/**
- * Formats action text with appropriate emoji
- */
-function formatAction(action: LinearAction): string {
-  switch (action) {
-    case 'create':
-      return '✅ Created';
-    case 'update':
-      return '📝 Updated';
-    case 'remove':
-      return '🗑️ Removed';
-    default:
-      return action;
-  }
-}
 
-/**
- * Formats priority with emoji
- */
-function formatPriority(priority: number): string {
-  switch (priority) {
-    case 1:
-      return '🔴 Urgent';
-    case 2:
-      return '🟠 High';
-    case 3:
-      return '🟡 Medium';
-    case 4:
-      return '🔵 Low';
-    default:
-      return `Priority ${priority}`;
-  }
-}
 
 /**
  * Formats an issue webhook payload into a Telegram message
