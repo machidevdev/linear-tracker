@@ -20,10 +20,20 @@ function escapeMarkdown(text: string): string {
  */
 function formatIssueMessage(payload: LinearWebhookPayload): string {
   const issue = payload.data as LinearIssue;
-  const statusLower = issue.state.name.toLowerCase();
+  const currentStatus = issue.state.name.toLowerCase();
+  
+  // Check if there's a previous state in updatedFrom
+  let statusDisplay = currentStatus;
+  if (payload.action === 'update' && payload.updatedFrom && 'state' in payload.updatedFrom) {
+    const previousState = (payload.updatedFrom as any).state;
+    if (previousState && previousState.name) {
+      const previousStatus = previousState.name.toLowerCase();
+      statusDisplay = `${previousStatus} \\→ ${currentStatus}`;
+    }
+  }
   
   // Simple format: [status]: Title - Actor
-  let message = `\\[${escapeMarkdown(statusLower)}\\]: [${escapeMarkdown(issue.title)}](${issue.url})\n`;
+  let message = `\\[${escapeMarkdown(statusDisplay)}\\]: [${escapeMarkdown(issue.title)}](${issue.url})\n`;
   message += `\\- ${escapeMarkdown(payload.actor.name)}\n`;
   
   return message;
