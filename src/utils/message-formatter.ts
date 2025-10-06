@@ -51,10 +51,10 @@ function formatDate(dateString: string): string {
 function formatIssueMessage(payload: LinearWebhookPayload): string {
   const issue = payload.data as LinearIssue;
 
-  // Action header
+  // Action header - check if it's a sub-issue
   let actionText = '';
   if (payload.action === 'create') {
-    actionText = '🎯 New issue';
+    actionText = issue.parent ? '🔗 New sub-issue' : '🎯 New issue';
   } else if (payload.action === 'update') {
     actionText = '🔄 Issue updated';
   } else if (payload.action === 'remove') {
@@ -63,15 +63,21 @@ function formatIssueMessage(payload: LinearWebhookPayload): string {
 
   let message = `${actionText}\n`;
 
-  // Title and creator
-  message += `[${escapeMarkdown(issue.title)}](${issue.url}) \\- ${escapeMarkdown(issue.creator.name)}\n`;
+  // Title and creator (use actor as fallback if creator is missing)
+  const creatorName = issue.creator?.name || payload.actor.name;
+  message += `[${escapeMarkdown(issue.title)}](${issue.url}) \\- ${escapeMarkdown(creatorName)}\n`;
+
+  // Show parent issue if this is a sub-issue
+  if (issue.parent) {
+    message += `↳ Parent: ${escapeMarkdown(issue.parent.title)}\n`;
+  }
 
   // Build metadata line (priority, due date, status)
   const metadata: string[] = [];
 
-  // Add priority
-  const priorityLabel = getPriorityLabel(issue.priority);
-  if (issue.priority > 0) {
+  // Add priority (only if defined and greater than 0)
+  if (issue.priority && issue.priority > 0) {
+    const priorityLabel = getPriorityLabel(issue.priority);
     metadata.push(`Priority: ${escapeMarkdown(priorityLabel)}`);
   }
 
@@ -81,16 +87,18 @@ function formatIssueMessage(payload: LinearWebhookPayload): string {
     metadata.push(`Due: ${escapeMarkdown(formattedDate)}`);
   }
 
-  // Add status (with transition if updated)
-  const currentStatus = issue.state.name;
-  if (payload.action === 'update' && payload.updatedFrom && 'state' in payload.updatedFrom) {
-    const previousState = (payload.updatedFrom as any).state;
-    if (previousState && previousState.name) {
-      const previousStatus = previousState.name;
-      metadata.push(`${escapeMarkdown(previousStatus)} → ${escapeMarkdown(currentStatus)}`);
+  // Add status (with transition if updated) - only if state exists
+  if (issue.state) {
+    const currentStatus = issue.state.name;
+    if (payload.action === 'update' && payload.updatedFrom && 'state' in payload.updatedFrom) {
+      const previousState = (payload.updatedFrom as any).state;
+      if (previousState && previousState.name) {
+        const previousStatus = previousState.name;
+        metadata.push(`\\[${escapeMarkdown(previousStatus)}\\] \\-\\> \\[${escapeMarkdown(currentStatus)}\\]`);
+      }
+    } else {
+      metadata.push(escapeMarkdown(currentStatus));
     }
-  } else {
-    metadata.push(escapeMarkdown(currentStatus));
   }
 
   if (metadata.length > 0) {

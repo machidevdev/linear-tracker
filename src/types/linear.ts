@@ -34,7 +34,7 @@ export interface LinearIssue {
   id: string;
   title: string;
   description?: string;
-  priority: number;
+  priority?: number;
   estimate?: number;
   createdAt: string;
   updatedAt: string;
@@ -43,7 +43,7 @@ export interface LinearIssue {
   number: number;
   url: string;
   identifier: string;
-  state: {
+  state?: {
     id: string;
     name: string;
     type: string;
@@ -59,10 +59,15 @@ export interface LinearIssue {
     name: string;
     email: string;
   };
-  creator: {
+  creator?: {
     id: string;
     name: string;
     email: string;
+  };
+  parent?: {
+    id: string;
+    title: string;
+    identifier: string;
   };
   labels?: Array<{
     id: string;
