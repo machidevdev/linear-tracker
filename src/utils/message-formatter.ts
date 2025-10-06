@@ -102,6 +102,14 @@ function formatIssueMessage(payload: LinearWebhookPayload): string {
     message += `👤 ${escapeMarkdown(issue.assignee.name)}\n`;
   }
 
+  // Add description for new issues
+  if (payload.action === 'create' && issue.description) {
+    const truncatedDescription = issue.description.length > 300
+      ? issue.description.substring(0, 300) + '...'
+      : issue.description;
+    message += `\n${escapeMarkdown(truncatedDescription)}\n`;
+  }
+
   return message;
 }
 
