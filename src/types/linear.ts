@@ -39,6 +39,7 @@ export interface LinearIssue {
   createdAt: string;
   updatedAt: string;
   archivedAt?: string;
+  dueDate?: string;
   number: number;
   url: string;
   identifier: string;

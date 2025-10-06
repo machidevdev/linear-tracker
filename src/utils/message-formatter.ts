@@ -13,6 +13,36 @@ function escapeMarkdown(text: string): string {
   return text.replace(/[_*\[\]()~`>#+=|{}.!-]/g, '\\$&');
 }
 
+/**
+ * Converts Linear priority number to readable label
+ * Priority values: 0 = No priority, 1 = Urgent, 2 = High, 3 = Medium, 4 = Low
+ */
+function getPriorityLabel(priority: number): string {
+  switch (priority) {
+    case 1:
+      return 'Urgent';
+    case 2:
+      return 'High';
+    case 3:
+      return 'Medium';
+    case 4:
+      return 'Low';
+    default:
+      return 'No priority';
+  }
+}
+
+/**
+ * Formats date string to readable format
+ */
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  const month = date.toLocaleString('en-US', { month: 'short' });
+  const day = date.getDate();
+  const year = date.getFullYear();
+  return `${month} ${day}, ${year}`;
+}
+
 
 
 /**
@@ -20,22 +50,58 @@ function escapeMarkdown(text: string): string {
  */
 function formatIssueMessage(payload: LinearWebhookPayload): string {
   const issue = payload.data as LinearIssue;
-  const currentStatus = issue.state.name.toLowerCase();
-  
-  // Check if there's a previous state in updatedFrom
-  let statusDisplay = currentStatus;
+
+  // Action header
+  let actionText = '';
+  if (payload.action === 'create') {
+    actionText = '🎯 New issue';
+  } else if (payload.action === 'update') {
+    actionText = '🔄 Issue updated';
+  } else if (payload.action === 'remove') {
+    actionText = '🗑️ Issue removed';
+  }
+
+  let message = `${actionText}\n`;
+
+  // Title and creator
+  message += `[${escapeMarkdown(issue.title)}](${issue.url}) \\- ${escapeMarkdown(issue.creator.name)}\n`;
+
+  // Build metadata line (priority, due date, status)
+  const metadata: string[] = [];
+
+  // Add priority
+  const priorityLabel = getPriorityLabel(issue.priority);
+  if (issue.priority > 0) {
+    metadata.push(`Priority: ${escapeMarkdown(priorityLabel)}`);
+  }
+
+  // Add due date
+  if (issue.dueDate) {
+    const formattedDate = formatDate(issue.dueDate);
+    metadata.push(`Due: ${escapeMarkdown(formattedDate)}`);
+  }
+
+  // Add status (with transition if updated)
+  const currentStatus = issue.state.name;
   if (payload.action === 'update' && payload.updatedFrom && 'state' in payload.updatedFrom) {
     const previousState = (payload.updatedFrom as any).state;
     if (previousState && previousState.name) {
-      const previousStatus = previousState.name.toLowerCase();
-      statusDisplay = `${previousStatus} \\→ ${currentStatus}`;
+      const previousStatus = previousState.name;
+      metadata.push(`${escapeMarkdown(previousStatus)} → ${escapeMarkdown(currentStatus)}`);
     }
+  } else {
+    metadata.push(escapeMarkdown(currentStatus));
   }
-  
-  // Simple format: [status]: Title - Actor
-  let message = `\\[${escapeMarkdown(statusDisplay)}\\]: [${escapeMarkdown(issue.title)}](${issue.url})\n`;
-  message += `\\- ${escapeMarkdown(payload.actor.name)}\n`;
-  
+
+  if (metadata.length > 0) {
+    message += metadata.join(' • ') + '\n';
+  }
+
+  // Add assignee
+  if (issue.assignee) {
+    message += `👤 ${escapeMarkdown(issue.assignee.name)}\n`;
+  }
+
   return message;
 }
 
